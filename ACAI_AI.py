@@ -50,7 +50,7 @@ class ACEnv(gym.Env):
 
 
     def reset(self, seed = None, options = None):
-        
+        super().reset(seed=seed)
         #series of inputs to reset the game
         vj.set_button(1,1)
         
@@ -107,7 +107,7 @@ class ACEnv(gym.Env):
         next_state = self.convert_state()
 
         reward = self.reward()
-        return next_state, reward, terminal, False, {}
+        return next_state, reward, terminal, terminal, {}
 
     #convert -1.0 to 1.0 to 0x1 to 0x8000
     def convert_steer_axis(self, value):
@@ -145,16 +145,13 @@ class ACEnv(gym.Env):
 
     def get_state_shared_mem(self):
         temp = State.State()
-        
-        #open shared memory
-       
-
         #read shared memory
         self.mm.seek(0)
+        if self.mm.size() < 2048 or self.mm.size() > 2048:
+            return self.get_state_shared_mem()
         data = self.mm.read(2048).decode('utf-8')
         # remove bytes after '\0'
         data = data[:data.find('\0')]
-        data = data.replace('\0', '')
         # print(data, end='\r')
         temp.from_json(data)
         print(temp.speedKMH, end='\r')    
@@ -162,7 +159,7 @@ class ACEnv(gym.Env):
         # time.sleep(0.1)
 
         return temp
-    
+
 
     def convert_state(self):
         #convert state to tensorforce format
@@ -176,13 +173,14 @@ class ACEnv(gym.Env):
                           ], dtype=np.float32)
 
         return state_converted
-    
-        
+
+
 
 
 if __name__ == "__main__":
     env =ACEnv()
     model = PPO("MlpPolicy", env)
     model.learn(total_timesteps=250000)
+    model.save("ppo_acai")
 
     

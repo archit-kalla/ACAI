@@ -6,6 +6,7 @@ state = State.State()
 def get_state_shared_mem():
     global mm, state
     #read shared memory
+    
     mm.seek(0)
     data = mm.read(2048).decode('utf-8')
     # remove bytes after '\0'
@@ -18,8 +19,7 @@ def get_state_shared_mem():
 
     print(state.isInvalidLap, end='\r')
 
-   
-    
-
 while True:
+    if mm.size() < 2048 or mm.size() > 2048:
+        continue
     get_state_shared_mem()
