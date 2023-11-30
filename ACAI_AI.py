@@ -2,23 +2,27 @@ import State
 import mmap
 import pyvjoy
 import time
+import math
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3 import PPO
+from stable_baselines3 import TD3, PPO
 
 #initialize vjoy controller
 vj = pyvjoy.VJoyDevice(1)
 
 
-SPEED_WEIGHT = 100
-TYRES_OUT_WEIGHT = 1
+SPEED_WEIGHT = 1
+TYRES_OUT_WEIGHT = 10
 TYRES_IN_WEIGHT = 1
 GAP_WEIGHT = 1.0 #gap is in ms so it is very large
 SLIP_ANGLE_WEIGHT = 0.1
-TRACK_COMPLETION_WEIGHT = 100
-MAX_NUM = 100000000000000000
+TRACK_COMPLETION_WEIGHT = 10000
+MAX_NUM = 1000
+A = 100  # Maximum reward
+B = 0.1  # Adjust the steepness of the curve
+C = 50   # Adjust the horizontal shift
 
 class ACEnv(gym.Env):
     def __init__(self):
@@ -29,12 +33,12 @@ class ACEnv(gym.Env):
             high = 1.0, 
         )
         self.observation_space = spaces.Box(
-            shape=(7,), 
+            shape=(9,), 
             dtype=np.float32,
-            low=np.array([0.0, 0.0, -MAX_NUM, 0.0, 0.0, 0.0, 0.0]), 
-            high=np.array([300.0, 1.0, MAX_NUM, 10000, 4.0, MAX_NUM, 1.0]), 
+            low=np.array([0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -MAX_NUM, -MAX_NUM, -MAX_NUM]), 
+            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, MAX_NUM, MAX_NUM, MAX_NUM]), 
         )
-        with open("C:\Program Files (x86)\Steam\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
+        with open("D:\SteamLibrary\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
             self.mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
         self.curr_state = State.State()
@@ -126,24 +130,33 @@ class ACEnv(gym.Env):
             track_reward -= self.curr_state.numberOftyresOut * TYRES_OUT_WEIGHT
         else:
             track_reward += 1 * TYRES_IN_WEIGHT
+        
+        if self.curr_state.isInvalidLap == 1:
+            track_reward -= 10000000000
 
         # Reward for speed
-        speed_reward = self.curr_state.speedKMH * SPEED_WEIGHT # You can adjust this based on how much you want to encourage speed.
+        speed_reward= A / (1 + math.exp(-B * (round(self.curr_state.speedKMH) - C)))
+        speed_reward *= SPEED_WEIGHT
 
         # Reward for gap, gap in ms so divide by 100 to reward .1s gap
-        gap_reward = -self.curr_state.gap / 100  * GAP_WEIGHT   # Negative because lower laptime is better.
+        # gap_reward = -self.curr_state.gap / 100  * GAP_WEIGHT   # Negative because lower laptime is better.
 
         track_completion_reward = 0
         if (self.prev_state is not None):
-            if self.curr_state.normalizedSplinePosition > self.prev_state.normalizedSplinePosition:
-                track_completion_reward = 1 * TRACK_COMPLETION_WEIGHT
+            if round(self.curr_state.normalizedSplinePosition,4) > round(self.prev_state.normalizedSplinePosition,4):
+                track_completion_reward = TRACK_COMPLETION_WEIGHT *(round(self.curr_state.normalizedSplinePosition,4) - round(self.prev_state.normalizedSplinePosition,4))
+            # else:
+            #     track_completion_reward -= TRACK_COMPLETION_WEIGHT * (round(self.prev_state.normalizedSplinePosition,4) - round(self.curr_state.normalizedSplinePosition,4))
 
         # Combine individual rewards and penalties
-        total_reward = track_reward + speed_reward + gap_reward + track_completion_reward
+        total_reward = track_reward + speed_reward + track_completion_reward
+
+        print("speed reward: ", speed_reward, "track reward: ", track_reward, "track completion reward: ", track_completion_reward, "total reward: ", total_reward, end='\r')
 
         return total_reward
 
     def get_state_shared_mem(self):
+        time.sleep(0.2) #lets the action occur and psuedo discretize the state
         temp = State.State()
         #read shared memory
         self.mm.seek(0)
@@ -154,23 +167,33 @@ class ACEnv(gym.Env):
         data = data[:data.find('\0')]
         # print(data, end='\r')
         temp.from_json(data)
-        print(temp.speedKMH, end='\r')    
-        
-        # time.sleep(0.1)
-
         return temp
 
 
     def convert_state(self):
         #convert state to tensorforce format
         state_converted = np.array([self.curr_state.speedKMH,
-                          self.curr_state.normalizedSplinePosition,
-                          self.curr_state.gap, 
-                          self.curr_state.rpms, 
-                          self.curr_state.numberOftyresOut, 
-                          self.curr_state.laptime, 
-                          self.curr_state.isInvalidLap, 
-                          ], dtype=np.float32)
+                                    self.curr_state.normalizedSplinePosition,
+                                    self.curr_state.gap, 
+                                    self.curr_state.rpms, 
+                                    self.curr_state.numberOftyresOut, 
+                                    #   self.curr_state.laptime, 
+                                    self.curr_state.isInvalidLap,
+                                    self.curr_state.worldPosition[0],
+                                    self.curr_state.worldPosition[1],
+                                    self.curr_state.worldPosition[2] 
+                                    ], dtype=np.float32) 
+        
+        #normalize state values from -1 to 1
+        state_converted[0] = state_converted[0]/300.0
+        state_converted[1] = state_converted[1]/1.0
+        state_converted[2] = state_converted[2]/MAX_NUM
+        state_converted[3] = state_converted[3]/10000
+        state_converted[4] = state_converted[4]/4.0
+        state_converted[5] = state_converted[5]/1.0
+        # state_converted[6] = state_converted[6]/1000000
+        # print(state_converted)
+
 
         return state_converted
 
@@ -180,7 +203,8 @@ class ACEnv(gym.Env):
 if __name__ == "__main__":
     env =ACEnv()
     model = PPO("MlpPolicy", env)
-    model.learn(total_timesteps=250000)
+    # model.load("ppo_acai.zip")
+    model.learn(total_timesteps=1000000)
     model.save("ppo_acai")
 
     

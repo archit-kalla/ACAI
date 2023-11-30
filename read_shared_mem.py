@@ -1,6 +1,6 @@
 import State
 import mmap
-with open("C:\Program Files (x86)\Steam\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
+with open("D:\SteamLibrary\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
     mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 state = State.State()
 def get_state_shared_mem():
@@ -17,7 +17,7 @@ def get_state_shared_mem():
     # print(data)
     state.from_json(data)
 
-    print(state.isInvalidLap, end='\r')
+    print(state.speedKMH, state.isInvalidLap, end='\r')
 
 while True:
     if mm.size() < 2048 or mm.size() > 2048:

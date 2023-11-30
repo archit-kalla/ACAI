@@ -11,6 +11,7 @@ class State:
         self.gap = 0
         self.laptime = 0
         self.slipAngle = 0
+        self.worldPosition = [0,0,0]
 
     def from_json(self, json_str):
         json_str = json.loads(json_str)
