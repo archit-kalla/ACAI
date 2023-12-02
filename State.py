@@ -12,6 +12,9 @@ class State:
         self.laptime = 0
         self.slipAngle = 0
         self.worldPosition = [0,0,0]
+        self.velvector = [0,0,0]
+        self.carDamaged= 0
+        self.steerAngle = 0
 
     def from_json(self, json_str):
         json_str = json.loads(json_str)
@@ -24,4 +27,9 @@ class State:
         self.gap = json_str['gap']
         self.laptime = json_str['laptime']
         self.slipAngle = json_str['slipAngle']
+        self.worldPosition = json_str['worldPosition']
+        self.velvector = json_str['velvector']
+        self.carDamaged= json_str['carDamaged']
+        self.steerAngle = json_str['steerAngle']
+        
     
