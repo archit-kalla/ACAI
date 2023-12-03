@@ -11,6 +11,11 @@ class State:
         self.gap = 0
         self.laptime = 0
         self.slipAngle = 0
+        self.worldPosition = [0,0,0]
+        self.velvector = [0,0,0]
+        self.carDamaged= 0
+        self.session_time_left = 0
+        self.steerAngle = 0
     
     #json
     def toJSON(self):

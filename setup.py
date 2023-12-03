@@ -6,5 +6,6 @@ setup(
         'gymnasium',
         'numpy',
         'pyvjoy',
-    ]
+    ],
+    exclude=['ACAI/logs']
 )

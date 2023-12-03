@@ -5,7 +5,9 @@ import math
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-# from stable_baselines3.common.env_checker import check_env
+from gymnasium.envs.registration import register
+
+from stable_baselines3.common.env_checker import check_env
 # from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 # from stable_baselines3 import TD3, PPO
 # from rl_zoo3 import TD3
@@ -77,8 +79,8 @@ class ACEnv(gym.Env):
         self.observation_space = spaces.Box(
             shape=(12,), 
             dtype=np.float32,
-            low=np.array([0.0, 0.0, -1.0, 0.0, 0.0,-1.0, -MAX_NUM, -MAX_NUM, -MAX_NUM, -MAX_NUM, -MAX_NUM, -MAX_NUM]), 
-            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0,1.0, MAX_NUM, MAX_NUM, MAX_NUM, MAX_NUM, MAX_NUM, MAX_NUM]), 
+            low=np.array([0.0, 0.0, -1.0, 0.0, 0.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]), 
+            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0,1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), 
         )
         with open("D:\SteamLibrary\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
             self.mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
@@ -156,7 +158,7 @@ class ACEnv(gym.Env):
         next_state = self.convert_state()
 
         reward = self.reward()
-        return next_state, reward, terminal, terminal, {}
+        return next_state, reward, terminal, False, {}
 
     #convert -1.0 to 1.0 to 0x1 to 0x8000
     def convert_steer_axis(self, value):
@@ -213,7 +215,7 @@ class ACEnv(gym.Env):
         else:
             total_reward = track_reward + speed_reward + track_completion_reward + gap_reward + steer_reward
 
-        print("speed reward: ", speed_reward, "track reward: ", track_reward, "track completion reward: ", track_completion_reward, "total reward: ", total_reward, end='\r')
+        # print("speed reward: ", speed_reward, "track reward: ", track_reward, "track completion reward: ", track_completion_reward, "total reward: ", total_reward, end='\r')
 
         return total_reward
 
@@ -254,11 +256,18 @@ class ACEnv(gym.Env):
         state_converted[0] = state_converted[0]/300.0
         state_converted[1] = state_converted[1]/1.0
         state_converted[2] = state_converted[2]/MAX_NUM
-        state_converted[3] = state_converted[3]/10000
-        state_converted[4] = state_converted[4]/4.0
-        state_converted[5] = state_converted[5]/1.0
-        state_converted[6] = state_converted[6]/180
-        # print(state_converted)
+        state_converted[3] = state_converted[3]/4.0
+        state_converted[4] = state_converted[4]/1.0
+        state_converted[5] = state_converted[5]/180
+        state_converted[6] = state_converted[6]/MAX_NUM
+        state_converted[7] = state_converted[7]/MAX_NUM
+        state_converted[8] = state_converted[8]/MAX_NUM
+        state_converted[9] = state_converted[9]/300
+        state_converted[10] = state_converted[10]/300
+        state_converted[11] = state_converted[11]/300
+
+
+        # print(state_converted.shape)
 
 
         return state_converted
@@ -269,8 +278,8 @@ class ACEnv(gym.Env):
 # if __name__ == "__main__":
 #     #register environment
 #     gym.register(id="ACAI-v0", entry_point='gym.envs.classic_control:ACAI', max_episode_steps=300)
-#     env = gym.make("ACAI-v0")
-#     #check environment
+
+
 
 
 

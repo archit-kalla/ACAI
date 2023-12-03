@@ -33,6 +33,8 @@ stopped = False
 prelap = False
 i=0
 prelaptime= True
+shared_mem = None
+state= State.State()
 with open("bestLapMap.json", 'r') as f:
     data = json.load(f)
     bestLapMap = data["arr"]
@@ -41,10 +43,10 @@ with open("bestLapMap.json", 'r') as f:
 currlapMap =[]
 def acMain(ac_version):
     global state, t
-    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left
+    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left, l_worldPosition, l_velvector, l_steerAngle
     
     appwindow = ac.newApp("ACAI")
-    ac.setSize(appwindow, 200, 200)
+    ac.setSize(appwindow, 200, 500)
     
     l_lapcount = ac.addLabel(appwindow, "Lapcount: 0")
     ac.setPosition(l_lapcount, 10, 10)
@@ -73,6 +75,16 @@ def acMain(ac_version):
     l_session_time_left = ac.addLabel(appwindow, "Session Time Left: 0")
     ac.setPosition(l_session_time_left, 10, 170)
 
+    l_worldPosition = ac.addLabel(appwindow, "World Position: 0")
+    ac.setPosition(l_worldPosition, 10, 190)
+
+    l_velvector = ac.addLabel(appwindow, "Velocity Vector: 0")
+    ac.setPosition(l_velvector, 10, 210)
+
+    l_steerAngle = ac.addLabel(appwindow, "Steer Angle: 0")
+    ac.setPosition(l_steerAngle, 10, 230)
+
+
     #create state
     state = State.State()
 
@@ -86,7 +98,8 @@ def acMain(ac_version):
 
 def acUpdate(deltaT):
     global state, i, storedLapTime, bestLapMap, currlapMap, prelap, prelaptime, lastnormalizedSplinePosition
-    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle
+    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left, l_worldPosition, l_velvector
+
 
     # set best lap data saves between sessions
     if (info.graphics.iLastTime<storedLapTime and storedLapTime>400 and info.graphics.iLastTime>0):
@@ -100,11 +113,14 @@ def acUpdate(deltaT):
             f.write(json.dumps({"arr": bestLapMap,
                         "time": storedLapTime}))
             f.close()
+
+    
     
     lastnormalizedSplinePosition = state.normalizedSplinePosition
 
     if (ac.getCarState(0, acsys.CS.LapCount)>state.lapcount):
         state.isInvalidLap = 0
+        state.gap = 0
         ac.log("lap finished")
         currlapMap = []
         ac.setText(l_validlap, "invalid Lap: " + str(state.isInvalidLap))
@@ -135,6 +151,7 @@ def acUpdate(deltaT):
         ac.log("lap started")
         prelap = False
         currlapMap = [0]
+        # state.gap = 0
 
 
     state.laptime = info.graphics.iCurrentTime
@@ -147,10 +164,41 @@ def acUpdate(deltaT):
     state.session_time_left = info.graphics.sessionTimeLeft
     ac.setText(l_session_time_left, "Session Time Left: " + str(state.session_time_left))
 
+    state.worldPosition = ac.getCarState(0, acsys.CS.WorldPosition)
+    ac.setText(l_worldPosition, "World Position: " + str(state.worldPosition))
+
+    state.velvector = ac.getCarState(0, acsys.CS.Velocity)
+    ac.setText(l_velvector, "Velocity Vector: " + str(state.velvector))
+
+    state.steerAngle = ac.getCarState(0, acsys.CS.Steer)
+    ac.setText(l_steerAngle, "Steer Angle: " + str(state.steerAngle))
+
     #detect session restart for 30 min hotlap session
-    if (state.session_time_left>1780000 and prelap == False):
+    # if prelap == True and state.session_time_left>1790000 and state.isInvalidLap == 1:
+    #     state.isInvalidLap = 0
+    #     ac.log("invalid lap reset")
+
+    for i in info.physics.carDamage:
+        if i>0:
+            state.carDamaged = 1
+            ac.log("car damaged")
+            break
+        else:
+            state.carDamaged = 0
+
+    
+
+    if (state.session_time_left>1790000 and prelap == False):
         prelap = True
+        state.isInvalidLap = 0
+        currlapMap = [0]
+        state.gap = 0
         ac.log("session started")
+    elif (state.session_time_left>1799900 and prelap == True):
+        state.isInvalidLap = 0
+        currlapMap = [0]
+        state.gap = 0
+        ac.log("invalid lap reset")
 
     #lap marker updates
     if (prelap):
@@ -205,22 +253,20 @@ def setupSharedMem():
         f.close()
 
     
-    with open('acai', 'r+b') as f:
-        shared_mem = mmap.mmap(f.fileno(), 2048, access=mmap.ACCESS_WRITE)
-    pass
+    
 
 def updateSharedMem(*args):
     global state, shared_mem, stopped
     setupSharedMem()
+    with open('acai', 'r+b') as f:
+        shared_mem = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
 
     while not stopped:
         #update shared memory
         shared_mem.seek(0)
-        shared_mem.write(state.toJSON().encode())
-        shared_mem.write(b'\0' * (2048 - len(state.toJSON().encode())))
+        shared_mem.write(state.toJSON().encode()+ b'\0' * (2048 - len(state.toJSON().encode())))
         shared_mem.flush()
         # ac.log("Shared memory updated")
-        # time.sleep(0.033)
+        time.sleep(0.033)
     shared_mem.close()
-    shared_mem.unlink()
     return
