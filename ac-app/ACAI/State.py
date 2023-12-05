@@ -16,6 +16,7 @@ class State:
         self.carDamaged= 0
         self.session_time_left = 0
         self.steerAngle = 0
+        self.distToIdealLine = 0
     
     #json
     def toJSON(self):

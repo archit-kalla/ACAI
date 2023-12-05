@@ -47,6 +47,9 @@ class State:
         self.velvector = [0,0,0]
         self.carDamaged= 0
         self.steerAngle = 0
+        self.distToIdealLine = 0
+        self.distToWall_R = 0
+        self.distToWall_L = 0
 
     def from_json(self, json_str):
         json_str = json.loads(json_str)
@@ -63,6 +66,10 @@ class State:
         self.velvector = json_str['velvector']
         self.carDamaged= json_str['carDamaged']
         self.steerAngle = json_str['steerAngle']
+        self.distToIdealLine = json_str['distToIdealLine']
+        self.distToWall_R = json_str['distToWall_R']
+        self.distToWall_L = json_str['distToWall_L']
+
         
     
 
@@ -76,12 +83,23 @@ class ACEnv(gym.Env):
             low = -1.0, 
             high = 1.0, 
         )
-        self.observation_space = spaces.Box(
-            shape=(12,), 
-            dtype=np.float32,
-            low=np.array([0.0, 0.0, -1.0, 0.0, 0.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]), 
-            high=np.array([1.0, 1.0, 1.0, 1.0, 1.0,1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), 
-        )
+        self.observation_space = spaces.Dict({
+            "speedKMH": spaces.Box(low=0, high=300, shape=(1,), dtype=np.float64),
+            "normalizedSplinePosition": spaces.Box(low=0, high=1, shape=(1,), dtype=np.float64),
+            # "gap": spaces.Box(low=0, high=MAX_NUM, shape=(1,), dtype=np.float32),
+            "numberOftyresOut": spaces.Box(low=0, high=4, shape=(1,), dtype=np.float64),
+            # "laptime": spaces.Box(low=0, high=MAX_NUM, shape=(1,), dtype=np.float32),
+            "isInvalidLap": spaces.Box(low=0, high=1, shape=(1,), dtype=np.float64),
+            "steerAngle": spaces.Box(low=-180, high=180, shape=(1,), dtype=np.float64),
+            "worldPosition": spaces.Box(low=-MAX_NUM, high=MAX_NUM, shape=(3,), dtype=np.float64),
+            "velvector": spaces.Box(low=-MAX_NUM, high=MAX_NUM, shape=(3,), dtype=np.float64),
+            "distToIdealLine": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float64),
+            "distToWall_R": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float64),
+            "distToWall_L": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float64),
+            "slipAngle": spaces.Box(low=-100, high=100, shape=(4,), dtype=np.float64),
+        })
+        
+        
         with open("D:\SteamLibrary\steamapps\common\\assettocorsa\\acai", 'r+b') as f:
             self.mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
@@ -192,35 +210,59 @@ class ACEnv(gym.Env):
 
         steer_reward = 0
 
-        # #if angle between -30 and 30, reward
-        # if abs(self.curr_state.steerAngle) <= 30:
-        #     steer_reward += 10
-        # else:
-        #     steer_reward -= 10
+
 
             
-
+        ideal_line_reward = 0
+        wall_R_reward = 0
+        wall_L_reward = 0
         track_completion_reward = 0
         if (self.prev_state is not None):
-            if round(self.curr_state.normalizedSplinePosition,4) > round(self.prev_state.normalizedSplinePosition,4):
-                track_completion_reward = TRACK_COMPLETION_WEIGHT *(round(self.curr_state.normalizedSplinePosition,4) - round(self.prev_state.normalizedSplinePosition,4))
+                
+            if round(self.curr_state.normalizedSplinePosition,4) > round(self.prev_state.normalizedSplinePosition,4) or (self.curr_state.normalizedSplinePosition < 0.1 and self.prev_state.normalizedSplinePosition > 0.9):
+                track_completion_reward = min(TRACK_COMPLETION_WEIGHT *(round(self.curr_state.normalizedSplinePosition,4) - round(self.prev_state.normalizedSplinePosition,4)),10)
+                
+                if self.curr_state.distToIdealLine <7:
+                    ideal_line_reward = 20
+
+                if self.curr_state.distToIdealLine > 10:
+                    ideal_line_reward = -5
+                
+                #lose points for being too close to wall based on distance
+                wall_R_reward = -max(10-self.curr_state.distToWall_R,0) *2
+                wall_L_reward = -max(10-self.curr_state.distToWall_L,0) *2
+
+                #if 15 from wall, reduce reward
+                if self.curr_state.distToWall_R> 15:
+                    wall_R_reward = -5
+                if self.curr_state.distToWall_L> 15:
+                    wall_L_reward = -5
+
+            
             else:
                 track_completion_reward = -10 #going backwards is bad
+
+        # # #slip angle reward
+        slip_angle_reward = 0
+        # # #don't reward slip angle if speed is greater than 3
+        # for i in self.curr_state.slipAngle:
+        #     if abs(i) > 10 and round(self.curr_state.speedKMH) > 100:
+        #         slip_angle_reward -= 10 #out of control
 
         
             
         # Combine individual rewards and penalties
-        if round(self.curr_state.speedKMH)<=0:
+        if round(self.curr_state.speedKMH)<=3:
             total_reward= 0
         else:
-            total_reward = track_reward + speed_reward + track_completion_reward + gap_reward + steer_reward
+            total_reward = track_reward + speed_reward + track_completion_reward + gap_reward + steer_reward + ideal_line_reward + wall_R_reward + wall_L_reward + slip_angle_reward
 
-        # print("speed reward: ", speed_reward, "track reward: ", track_reward, "track completion reward: ", track_completion_reward, "total reward: ", total_reward, end='\r')
-
+        #print rewards for debugging truncating to 2 decimal places
+        print("total: {:.2f} on-track: {:.2f} track-comp: {:.2f} speed: {:.2f} gap: {:.2f} steer: {:.2f} ideal: {:.2f} wall_R: {:.2f} wall_L: {:.2f} slip: {:.2f}".format(total_reward,track_reward,track_completion_reward,speed_reward,gap_reward,steer_reward,ideal_line_reward,wall_R_reward,wall_L_reward,slip_angle_reward),end='\r')
         return total_reward
 
     def get_state_shared_mem(self):
-        time.sleep(0.2) #lets the action occur and psuedo discretize the state
+        time.sleep(0.05) #lets the action occur and psuedo discretize the state
         temp = State()
         #read shared memory
         self.mm.seek(0)
@@ -235,64 +277,28 @@ class ACEnv(gym.Env):
 
 
     def convert_state(self):
-        #convert state to tensorforce format
-        state_converted = np.array([self.curr_state.speedKMH,
-                                    self.curr_state.normalizedSplinePosition,
-                                    self.curr_state.gap, 
-                             
-                                    self.curr_state.numberOftyresOut, 
-                                    #   self.curr_state.laptime, 
-                                    self.curr_state.isInvalidLap,
-                                    self.curr_state.steerAngle,
-                                    self.curr_state.worldPosition[0],
-                                    self.curr_state.worldPosition[1],
-                                    self.curr_state.worldPosition[2],
-                                    self.curr_state.velvector[0],
-                                    self.curr_state.velvector[1],
-                                    self.curr_state.velvector[2] 
-                                    ], dtype=np.float32) 
-        
-        #normalize state values from -1 to 1
-        state_converted[0] = state_converted[0]/300.0
-        state_converted[1] = state_converted[1]/1.0
-        state_converted[2] = state_converted[2]/MAX_NUM
-        state_converted[3] = state_converted[3]/4.0
-        state_converted[4] = state_converted[4]/1.0
-        state_converted[5] = state_converted[5]/180
-        state_converted[6] = state_converted[6]/MAX_NUM
-        state_converted[7] = state_converted[7]/MAX_NUM
-        state_converted[8] = state_converted[8]/MAX_NUM
-        state_converted[9] = state_converted[9]/300
-        state_converted[10] = state_converted[10]/300
-        state_converted[11] = state_converted[11]/300
+        #convert state to spaces format
+        state_converted = {}
+        state_converted["speedKMH"] = np.array([self.curr_state.speedKMH])
+        state_converted["normalizedSplinePosition"] = np.array([self.curr_state.normalizedSplinePosition])
+        # state_converted["gap"] = np.array([self.curr_state.gap])
+        state_converted["numberOftyresOut"] = np.array([self.curr_state.numberOftyresOut/4.0])
+        # state_converted["laptime"] = np.array([self.curr_state.laptime])
+        state_converted["isInvalidLap"] = np.array([self.curr_state.isInvalidLap/1.0])
+        state_converted["steerAngle"] = np.array([self.curr_state.steerAngle])
+        state_converted["worldPosition"] = np.array(self.curr_state.worldPosition)
+        state_converted["velvector"] = np.array(self.curr_state.velvector)
+        state_converted["distToIdealLine"] = np.array([self.curr_state.distToIdealLine])
+        state_converted["distToWall_R"] = np.array([self.curr_state.distToWall_R])
+        state_converted["distToWall_L"] = np.array([self.curr_state.distToWall_L])
+        state_converted["slipAngle"] = np.array(self.curr_state.slipAngle)
 
-
-        # print(state_converted.shape)
-
-
+        # ret = spaces.Dict(state_converted)
         return state_converted
 
 
+#if main
 
-
-# if __name__ == "__main__":
-#     #register environment
-#     gym.register(id="ACAI-v0", entry_point='gym.envs.classic_control:ACAI', max_episode_steps=300)
-
-
-
-
-
-    # env =ACEnv()
-    # time_wrapper = gym.wrappers.TimeLimit(env, max_episode_steps=300)
-
-
-    # n_actions = time_wrapper.action_space.shape[-1]
-    # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=np.ones(n_actions) * 0.3, dtype=np.float32)
-
-    # model = TD3("MlpPolicy", time_wrapper,action_noise=action_noise, verbose=1)
-    # model.learn(total_timesteps=100000)
-    # model.save("TD3_acai")
-    # model.save_replay_buffer("TD3_acai_replay_buffer")
-
-    
+if __name__ == "__main__":
+    env = ACEnv()
+    check_env(env, warn=True)
