@@ -19,7 +19,7 @@ This ensures that python directories are at the C:\ level
 
 
 #### Python 3.3
-
+- none uses default packages
 #### Python 3.10
 
 
