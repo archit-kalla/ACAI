@@ -195,7 +195,7 @@ python3.10 -m rl_zoo3.enjoy --algo td3 --env ACAI-v0 -f <path-to-your-log-folder
 - every 10000 <iters> it saves a model
 
 # overview information
-- presentation can be found in ACAI_Presentation_ARCHIT_KALLA.mp4
+- presentation can be found here: https://youtu.be/hJRGfN3b2EE
 - create issue report for questions or contact via kalla100@umn.edu or archkalla@gmail.com (cc both please)
 
 
