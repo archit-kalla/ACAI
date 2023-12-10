@@ -47,6 +47,27 @@ pip3.10 install rl_zoo3 --user
 
 - load these setting in content manager
 
+#### setup ACAI
+
+- in the root directory:
+```
+pip3.10 install -e .
+
+```
+##### Register ACAI to rl_zoo3
+- navigate to C:\Users\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3
+- edit import_envs.py
+- add the following lines of code to the try catch series of statements
+```
+...
+try:
+    import ACAI
+    # gym.make("ACAI-v0")
+except ImportError:
+    print("ACAI not installed")
+    pass
+ ```
+
 
 
 
