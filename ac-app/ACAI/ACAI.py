@@ -216,7 +216,7 @@ def acUpdate(deltaT):
 
 
 
-    #detect session restart for 30 min hotlap session
+
     # if prelap == True and state.session_time_left>1790000 and state.isInvalidLap == 1:
     #     state.isInvalidLap = 0
     #     ac.log("invalid lap reset")
@@ -230,7 +230,7 @@ def acUpdate(deltaT):
             state.carDamaged = 0
 
     
-
+    #detect session restart for 30 min hotlap session
     if (state.session_time_left>1790000 and prelap == False):
         prelap = True
         state.isInvalidLap = 0
@@ -257,6 +257,7 @@ def acUpdate(deltaT):
     elif (lastnormalizedSplinePosition>state.normalizedSplinePosition):
         pass
     else:
+        #unused logic to update gap information
         # currlapMap.append(state.laptime)
         # # compare with best lap
         # #get idx of current lap
