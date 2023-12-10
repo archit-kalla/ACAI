@@ -37,7 +37,7 @@ shared_mem = None
 state= State.State()
 
 track_limits = {}
-with open("bestLapMap.json", 'r') as f:
+with open("bestLapMap.json", 'r') as f: # manually created best lap map, every .05 % of track point is made recording laptime at moment, not used atm so values are invalid
     data = json.load(f)
     bestLapMap = data["arr"]
     storedLapTime = data["time"]
