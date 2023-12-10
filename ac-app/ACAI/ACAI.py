@@ -35,15 +35,28 @@ i=0
 prelaptime= True
 shared_mem = None
 state= State.State()
+
+track_limits = {}
 with open("bestLapMap.json", 'r') as f:
     data = json.load(f)
     bestLapMap = data["arr"]
     storedLapTime = data["time"]
     f.close()
+
+with open("track_limits_R.json", 'r') as f:
+    ideal_line = json.load(f)
+    f.close()
+
+with open("track_limits_RR.json", 'r') as f:
+    wall = json.load(f)
+    f.close()
+with open("track_limits_L.json", 'r') as f:
+    track_limits = json.load(f)
+    f.close()
 currlapMap =[]
 def acMain(ac_version):
     global state, t
-    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left, l_worldPosition, l_velvector, l_steerAngle
+    global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left, l_worldPosition, l_velvector, l_steerAngle, l_distToIdealLine, l_distToWall_R, l_distToWall_L, l_currReward
     
     appwindow = ac.newApp("ACAI")
     ac.setSize(appwindow, 200, 500)
@@ -84,6 +97,17 @@ def acMain(ac_version):
     l_steerAngle = ac.addLabel(appwindow, "Steer Angle: 0")
     ac.setPosition(l_steerAngle, 10, 230)
 
+    l_distToIdealLine = ac.addLabel(appwindow, "Distance to Ideal Line: 0")
+    ac.setPosition(l_distToIdealLine, 10, 250)
+
+    l_distToWall_R = ac.addLabel(appwindow, "Distance to Wall R: 0")
+    ac.setPosition(l_distToWall_R, 10, 270)
+
+    l_distToWall_L = ac.addLabel(appwindow, "Distance to Wall L: 0")
+    ac.setPosition(l_distToWall_L, 10, 290)
+
+    l_currReward = ac.addLabel(appwindow, "Current Reward: 0")
+    ac.setPosition(l_currReward, 10, 310)
 
     #create state
     state = State.State()
@@ -97,7 +121,7 @@ def acMain(ac_version):
     return "ACAI"
 
 def acUpdate(deltaT):
-    global state, i, storedLapTime, bestLapMap, currlapMap, prelap, prelaptime, lastnormalizedSplinePosition
+    global state, i, storedLapTime, bestLapMap, currlapMap, prelap, prelaptime, lastnormalizedSplinePosition, ideal_line, track_limits, wall
     global l_lapcount, l_validlap, l_rpms, l_speedKMH, l_normalizedSplinePosition, l_gap, l_laptime, l_slipAngle, l_session_time_left, l_worldPosition, l_velvector
 
 
@@ -113,6 +137,8 @@ def acUpdate(deltaT):
             f.write(json.dumps({"arr": bestLapMap,
                         "time": storedLapTime}))
             f.close()
+        
+        
 
     
     
@@ -124,6 +150,9 @@ def acUpdate(deltaT):
         ac.log("lap finished")
         currlapMap = []
         ac.setText(l_validlap, "invalid Lap: " + str(state.isInvalidLap))
+        # with open('track_limits_L.json', 'w') as f:
+        #     f.write(json.dumps(track_limits))
+        #     f.close()
 
     
     state.numberOftyresOut = info.physics.numberOfTyresOut
@@ -173,6 +202,20 @@ def acUpdate(deltaT):
     state.steerAngle = ac.getCarState(0, acsys.CS.Steer)
     ac.setText(l_steerAngle, "Steer Angle: " + str(state.steerAngle))
 
+    curr_point =ideal_line.get(state.normalizedSplinePosition) or ideal_line[min(ideal_line.keys(), key = lambda key: abs(float(key)-state.normalizedSplinePosition))]
+    state.distToIdealLine = math.sqrt((curr_point[0]-state.worldPosition[0])**2+(curr_point[1]-state.worldPosition[1])**2 +(curr_point[2]-state.worldPosition[2])**2 )
+    ac.setText(l_distToIdealLine, "Distance to Ideal Line: " + str(state.distToIdealLine))
+
+    curr_point =wall.get(state.normalizedSplinePosition) or wall[min(wall.keys(), key = lambda key: abs(float(key)-state.normalizedSplinePosition))]
+    state.distToWall_R = math.sqrt((curr_point[0]-state.worldPosition[0])**2+(curr_point[1]-state.worldPosition[1])**2 +(curr_point[2]-state.worldPosition[2])**2 )
+    ac.setText(l_distToWall_R, "Distance to Wall R: " + str(state.distToWall_R))
+
+    curr_point =track_limits.get(state.normalizedSplinePosition) or track_limits[min(track_limits.keys(), key = lambda key: abs(float(key)-state.normalizedSplinePosition))]
+    state.distToWall_L = math.sqrt((curr_point[0]-state.worldPosition[0])**2+(curr_point[1]-state.worldPosition[1])**2 +(curr_point[2]-state.worldPosition[2])**2 )
+    ac.setText(l_distToWall_L, "Distance to Wall L: " + str(state.distToWall_L))
+
+
+
     #detect session restart for 30 min hotlap session
     # if prelap == True and state.session_time_left>1790000 and state.isInvalidLap == 1:
     #     state.isInvalidLap = 0
@@ -181,7 +224,7 @@ def acUpdate(deltaT):
     for i in info.physics.carDamage:
         if i>0:
             state.carDamaged = 1
-            ac.log("car damaged")
+            # ac.log("car damaged")
             break
         else:
             state.carDamaged = 0
@@ -204,9 +247,9 @@ def acUpdate(deltaT):
     if (prelap):
         lastnormalizedSplinePosition=0
         pass
-    elif ((round(state.normalizedSplinePosition *1000))%5!=0):
+    elif ((round(state.normalizedSplinePosition *10000))%5!=0):
         pass
-    elif (round(lastnormalizedSplinePosition*1000) == round(state.normalizedSplinePosition* 1000)):
+    elif (round(lastnormalizedSplinePosition*10000) == round(state.normalizedSplinePosition* 10000)):
         pass
     elif(len(currlapMap)<2 and prelaptime == True):
         prelaptime = False
@@ -214,14 +257,19 @@ def acUpdate(deltaT):
     elif (lastnormalizedSplinePosition>state.normalizedSplinePosition):
         pass
     else:
-        currlapMap.append(state.laptime)
-        # compare with best lap
-        #get idx of current lap
-        if (len(bestLapMap)>0):
-            idx = len(currlapMap)-1
-            state.gap = currlapMap[idx] - bestLapMap[idx]
-            ac.setText(l_gap, "Gap: " + str(state.gap))
-        ac.log(str(currlapMap[-1]))
+        # currlapMap.append(state.laptime)
+        # # compare with best lap
+        # #get idx of current lap
+        # if (len(bestLapMap)>0):
+        #     idx = len(currlapMap)-1
+        #     state.gap = currlapMap[idx] - bestLapMap[idx]
+        #     ac.setText(l_gap, "Gap: " + str(state.gap))
+        # # ac.log(str(currlapMap[-1]))
+
+        # track_limits.update({state.normalizedSplinePosition: state.worldPosition})
+        # ac.log(str(track_limits))
+        pass
+        
 
 
 
@@ -270,3 +318,29 @@ def updateSharedMem(*args):
         time.sleep(0.033)
     shared_mem.close()
     return
+
+def find_closest_key(dictionary, value):
+  """Finds the closest key in a dictionary to a given value.
+
+  Args:
+    dictionary: The dictionary to search.
+    value: The value to find the closest key for.
+
+  Returns:
+    The key in the dictionary that is closest to the given value.
+  """
+
+  # Get the list of all keys in the dictionary.
+  keys = list(dictionary.keys())
+
+  # Find the minimum difference between the value and the keys.
+  min_difference = 100000000000
+  closest_key = None
+  for key in keys:
+    difference = abs(value - float(key))
+    if difference < min_difference:
+      min_difference = difference
+      closest_key = key
+
+  return closest_key
+

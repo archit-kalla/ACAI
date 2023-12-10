@@ -17,6 +17,8 @@ class State:
         self.session_time_left = 0
         self.steerAngle = 0
         self.distToIdealLine = 0
+        self.distToWall_R = 0
+        self.distToWall_L = 0
     
     #json
     def toJSON(self):
