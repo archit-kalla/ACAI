@@ -194,7 +194,7 @@ python3.10 -m rl_zoo3.enjoy --algo td3 --env ACAI-v0 -f <path-to-your-log-folder
 ```
 
 - each time you run the train command it creates a new ACAI-v0_<your_exp_num>
-- every 10000 <iters> it saves a model
+- every 10000 \<iters> it saves a model
 
 # overview information
 - presentation can be found here: https://youtu.be/hJRGfN3b2EE
