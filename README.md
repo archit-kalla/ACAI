@@ -153,6 +153,53 @@ ACAI-v0:
     - turn on automatic shifting and clutch, this is because the environment wrapper only outputs steering between -1 to 1 and throttle (brake was not implemented as it is not a fast strategy on daytona, can be added but greatly increases training time)
     - enable traction and stability control, prevents lighting up rears on start.
 
+- start session 
+    - training create a logs folder outside of this repo directory and in that folder run:
+
+    ```
+    python3.10 -m rl_zoo3.train --algo td3 --env ACAI-v0 --save-freq 10000
+    ```
+        - Ctrl-C can work safely 
+
+
+### Run the trained model
+
+- anywhere run:
+```
+python3.10 -m rl_zoo3.enjoy --algo td3 --env ACAI-v0 -f <path-to-your-log-folder>\logs --exp-id <your_exp_num> --load-checkpoint <iters> --norm-reward --no-render
+```
+
+- logs folder struct
+<path-to-your-log-folder>\logs
+|--sac
+|--|ACAI-v0_1
+|--|--ACAI-v0
+|--|--|args.yml
+|--|--|config.yml
+|--|--|vecnormalize.pkl
+|--|--0.monitor.csv
+|--|--best_model.zip
+|--|--evaluations.npz
+|--|--rl_model_10000_steps.zip
+|--|--rl_model_20000_steps.zip
+|--|--rl_model_<iters>_steps.zip
+|
+|--|ACAI-v0_2
+|--|ACAI-v0_...
+|--td3
+|--|ACAI-v0_1
+|--|ACAI-v0_2
+|--|ACAI-v0_...
+
+- each time you run the train command it creates a new ACAI-v0_<your_exp_num>
+- every 10000 <iters> it saves a model
+
+# overview information
+- presentation can be found in ACAI_Presentation_ARCHIT_KALLA.mp4
+- create issue report for questions or contact via kalla100@umn.edu or archkalla@gmail.com (cc both please)
+
+
+
 
 
 
