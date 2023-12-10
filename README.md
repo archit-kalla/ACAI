@@ -170,6 +170,7 @@ python3.10 -m rl_zoo3.enjoy --algo td3 --env ACAI-v0 -f <path-to-your-log-folder
 ```
 
 - logs folder struct
+```
 <path-to-your-log-folder>\logs
 |--sac
 |--|ACAI-v0_1
@@ -185,11 +186,12 @@ python3.10 -m rl_zoo3.enjoy --algo td3 --env ACAI-v0 -f <path-to-your-log-folder
 |--|--rl_model_<iters>_steps.zip
 |
 |--|ACAI-v0_2
-|--|ACAI-v0_...
+|--|ACAI-v0_<your_exp_num>
 |--td3
 |--|ACAI-v0_1
 |--|ACAI-v0_2
 |--|ACAI-v0_...
+```
 
 - each time you run the train command it creates a new ACAI-v0_<your_exp_num>
 - every 10000 <iters> it saves a model
