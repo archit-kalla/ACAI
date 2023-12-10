@@ -43,14 +43,14 @@ with open("bestLapMap.json", 'r') as f:
     storedLapTime = data["time"]
     f.close()
 
-with open("track_limits_R.json", 'r') as f:
+with open("track_limits_R.json", 'r') as f: #manually created ideal line by ingame AI, every .05 % of track point is made (ignore file name lol)
     ideal_line = json.load(f)
     f.close()
 
-with open("track_limits_RR.json", 'r') as f:
+with open("track_limits_RR.json", 'r') as f: #manually created track limits, every .05 % of track point is made
     wall = json.load(f)
     f.close()
-with open("track_limits_L.json", 'r') as f:
+with open("track_limits_L.json", 'r') as f: #manually created track limits, every .05 % of track point is made
     track_limits = json.load(f)
     f.close()
 currlapMap =[]

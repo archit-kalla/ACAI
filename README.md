@@ -96,7 +96,11 @@ except ImportError:
 - in directory C:\Users\\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3\hyperparams there are hyperparameters for each implemented algorithm. 
     - the environment State is a Dict and outputs are continuous therefore only some algs will work
 
+#### Hyper paramater setup
+- feel free to tune and change the following hyperparams, descriptions can be found in stable baselines 3 documentation
+
 - in this implementation td3.yaml was updated with the following lines:
+
 
 ```
 ...
@@ -160,6 +164,7 @@ ACAI-v0:
 python3.10 -m rl_zoo3.train --algo td3 --env ACAI-v0 --save-freq 10000
 ```
 - Ctrl-C can work safely 
+- more training args can be found on RL zoo 3 documentation
 
 
 ### Run the trained model

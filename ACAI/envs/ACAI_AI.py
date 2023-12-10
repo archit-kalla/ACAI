@@ -140,7 +140,7 @@ class ACEnv(gym.Env):
         # print(self.curr_state)
         self.prev_state = None
 
-        #convert curr_state to tensorflow format
+        #convert curr_state to torch format
         state=self.convert_state()
 
         return state, {}
@@ -155,6 +155,9 @@ class ACEnv(gym.Env):
         # print ("steer: ", actions["steer"], "gas_brake: ", actions["gas_brake"])
         vj.data.wAxisY = self.convert_steer_axis(actions[1])
         vj.update()
+        # the following code can conver single axis output to gas- brake, was removed due to no fast strategies needing brake
+        # can be used for future reference
+
         # if (actions[1] >= 0):
         #     vj.data.wAxisY = self.convert_axis(actions[1])
         #     vj.data.wAxisZ = self.convert_axis(0.0)
