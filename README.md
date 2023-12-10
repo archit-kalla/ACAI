@@ -21,10 +21,11 @@ This ensures that python directories are at the C:\ level
 
 #### Python 3.10
 
-```pip3.10 install gymnasium --user
+`pip3.10 install gymnasium --user
 pip3.10 install pyvjoy --user
 pip3.10 install stable-baselines3[extra] --user
 pip3.10 install rl_zoo3 --user
-pip3.10 install torch torchvision torchaudio```
-- - note GPU accel is not needed
+pip3.10 install torch torchvision torchaudio`
+
+
 
