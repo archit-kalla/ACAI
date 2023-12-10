@@ -156,10 +156,10 @@ ACAI-v0:
 - start session 
     - training create a logs folder outside of this repo directory and in that folder run:
 
-    ```
-    python3.10 -m rl_zoo3.train --algo td3 --env ACAI-v0 --save-freq 10000
-    ```
-        - Ctrl-C can work safely 
+```
+python3.10 -m rl_zoo3.train --algo td3 --env ACAI-v0 --save-freq 10000
+```
+- Ctrl-C can work safely 
 
 
 ### Run the trained model
