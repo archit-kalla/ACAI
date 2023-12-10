@@ -2,6 +2,8 @@
 
 RL based racing implemetation fo Assetto Corsa
 
+does not use CV instead uses all info taken from sim data
+
 ## SETUP INSTRCTION
 
 - Ensure you have python 3.3 installed for Assetto Corsa Environment
@@ -47,13 +49,30 @@ pip3.10 install rl_zoo3 --user
 
 - load these setting in content manager
 
+- inside the directory "ac-app" copy the ACAI folder and paste into <Assetto Corsa install dir>\apps\python
+
+- in content manager enable content>miscellaneous ACAI should be present
+
+    - ensure that it is activated
+
+- inside AC_req_files copy all files and paste into Assetto Corsa install folder
+    - these files are essential as these are the maps for track limits and the shared memory file for state updates
+    - track limit files are specific to daytona, new tracks will need to have different maps. I have code to make this happen but its very manual so if there is a request i will make instructions.
+
+
+- changes should now be done inside the assetto corsa directory, updates require either a live reload in the python debugger app in assetto corsa (only available when custom shader patch installed) or restart session entirely (close window and restart session via Content manager)
+
 #### setup ACAI
 
-- in the root directory:
+- in the root directory of this repo:
 ```
 pip3.10 install -e .
 
 ```
+- adjust file paths in ACAI\ACAI\envs\ACAI_AI.py to match what is installed
+
+- edits in this directory will be live updated, no need to rerun install
+
 ##### Register ACAI to rl_zoo3
 - navigate to C:\Users\\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3
 - edit import_envs.py
@@ -122,6 +141,22 @@ ACAI-v0:
   use_sde: True
   use_sde_at_warmup: True
 ```
+#### Start Training
+
+- open content manager select car and track
+    - daytona 2017 oval (found on racedepartment)
+    - car can be anything, only trained on Lotus Exos 125
+
+- set conditions and ensure you are using hotlap mode with timelimit to 30 minutes (timelimit should be automatically to 30 mins)
+    - essential because some detection code relies on session timer
+    - enable damage (200% ensures if wall is hit at any speed damage will happen therfore reset)
+    - turn on automatic shifting and clutch, this is because the environment wrapper only outputs steering between -1 to 1 and throttle (brake was not implemented as it is not a fast strategy on daytona, can be added but greatly increases training time)
+    - enable traction and stability control, prevents lighting up rears on start.
+
+
+
+
+
 
 
 
