@@ -55,19 +55,73 @@ pip3.10 install -e .
 
 ```
 ##### Register ACAI to rl_zoo3
-- navigate to C:\Users\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3
+- navigate to C:\Users\\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3
 - edit import_envs.py
 - add the following lines of code to the try catch series of statements
 ```
 ...
+
 try:
     import ACAI
     # gym.make("ACAI-v0")
 except ImportError:
     print("ACAI not installed")
     pass
- ```
 
+...
+
+```
+
+### Training and hyperparams
+
+- in directory C:\Users\\<User>\AppData\Roaming\Python\Python310\site-packages\rl_zoo3\hyperparams there are hyperparameters for each implemented algorithm. 
+    - the environment State is a Dict and outputs are continuous therefore only some algs will work
+
+- in this implementation td3.yaml was updated with the following lines:
+
+```
+...
+
+ACAI-v0:
+  normalize: True
+  n_envs: 1
+  n_timesteps: !!float 1e6
+  policy: 'MultiInputPolicy'
+  learning_rate: !!float 7.3e-4
+  buffer_size: 300000
+  batch_size: 256
+  # ent_coef: 'auto'
+  gamma: 0.99
+  tau: 0.02
+  train_freq: 8
+  gradient_steps: 10
+  learning_starts: 0
+  # use_sde: True
+  # use_sde_at_warmup: True
+```
+- in this implementation sac.yaml was updated with the following lines:
+
+```
+...
+
+ACAI-v0:
+  # frame_stack: 4
+  normalize: True
+  n_envs: 1
+  n_timesteps: !!float 1e6
+  policy: 'MultiInputPolicy'
+  learning_rate: !!float 7.3e-4
+  buffer_size: 300000
+  batch_size: 256
+  ent_coef: 'auto'
+  gamma: 0.99
+  tau: 0.02
+  train_freq: 8
+  gradient_steps: 10
+  learning_starts: 1000
+  use_sde: True
+  use_sde_at_warmup: True
+```
 
 
 
