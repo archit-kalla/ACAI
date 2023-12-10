@@ -13,3 +13,18 @@ RL based racing implemetation fo Assetto Corsa
 - use standard installer to install python 3.3 
 
 This ensures that python directories are at the C:\ level
+
+### Install depedencies
+
+
+#### Python 3.3
+
+#### Python 3.10
+
+- `pip3.10 install gymnasium --user`
+- `pip3.10 install pyvjoy --user`
+- `pip3.10 install stable-baselines3[extra] --user`
+- `pip3.10 install rl_zoo3 --user`
+- `pip3.10 install torch torchvision torchaudio`
+- - note GPU accel is not needed
+
